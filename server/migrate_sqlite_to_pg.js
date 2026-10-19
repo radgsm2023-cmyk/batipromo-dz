@@ -1,6 +1,6 @@
 /**
  * Script de migration automatique de SQLite (batipromo.db) vers PostgreSQL
- * Utilisation : DATABASE_URL=postgres://user:password@host:5432/dbname node server/migrate_sqlite_to_pg.js
+ * Supporte les URLs directes et les poolers IPv4 Supabase
  */
 
 const { Pool } = require('pg');
@@ -8,12 +8,34 @@ const { DatabaseSync } = require('node:sqlite');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const DATABASE_URL = process.env.DATABASE_URL;
+let rawUrl = process.env.DATABASE_URL || process.argv[2];
 
-if (!DATABASE_URL) {
-  console.error("❌ ERREUR : La variable d'environnement DATABASE_URL n'est pas définie.");
-  console.log("Exemple : DATABASE_URL=\"postgresql://postgres:motdepasse@localhost:5432/batipromo\" node server/migrate_sqlite_to_pg.js");
+if (!rawUrl) {
+  console.error("❌ ERREUR : La variable d'environnement DATABASE_URL ou argument n'est pas définie.");
   process.exit(1);
+}
+
+// Nettoyage et parsing sécurisé de l'URL Supabase
+function createPgPool(inputUrl) {
+  // Détection Supabase direct -> pooler IPv4 si nécessaire
+  const supabaseMatch = inputUrl.match(/postgres:\/\/([^:]+):(.*)@db\.([a-z0-9]+)\.supabase\.co:5432\/(.*)/);
+  if (supabaseMatch) {
+    const [_, user, pass, projectRef, dbname] = supabaseMatch;
+    console.log(`🔌 Détection d'un projet Supabase (${projectRef}), utilisation du pooler IPv4 Session (eu-west-1:5432)...`);
+    return new Pool({
+      host: 'aws-0-eu-west-1.pooler.supabase.com',
+      port: 5432,
+      user: `${user}.${projectRef}`,
+      password: pass,
+      database: dbname || 'postgres',
+      ssl: { rejectUnauthorized: false }
+    });
+  }
+
+  return new Pool({
+    connectionString: inputUrl,
+    ssl: inputUrl.includes('localhost') || inputUrl.includes('127.0.0.1') ? false : { rejectUnauthorized: false }
+  });
 }
 
 const sqlitePath = path.resolve(__dirname, '..', 'batipromo.db');
@@ -23,10 +45,7 @@ if (!fs.existsSync(sqlitePath)) {
 }
 
 const sqliteDb = new DatabaseSync(sqlitePath);
-const pgPool = new Pool({
-  connectionString: DATABASE_URL,
-  ssl: DATABASE_URL.includes('localhost') || DATABASE_URL.includes('127.0.0.1') ? false : { rejectUnauthorized: false }
-});
+const pgPool = createPgPool(rawUrl);
 
 const TABLES_ORDER = [
   'users',
@@ -60,15 +79,21 @@ const TABLES_ORDER = [
 ];
 
 async function migrate() {
-  const client = await pgPool.connect();
-  console.log('🚀 Connexion réussie à PostgreSQL.');
+  let client;
+  try {
+    client = await pgPool.connect();
+    console.log('🚀 Connexion réussie à la base PostgreSQL Supabase !');
+  } catch (err) {
+    console.error('❌ Échec de connexion à PostgreSQL :', err.message);
+    process.exit(1);
+  }
 
   try {
     // 1. Initialiser le schéma PostgreSQL
     console.log('📦 Création des tables PostgreSQL depuis schema_postgres.sql...');
     const schemaSql = fs.readFileSync(path.resolve(__dirname, 'schema_postgres.sql'), 'utf-8');
     await client.query(schemaSql);
-    console.log('✅ Schéma PostgreSQL initialisé.');
+    console.log('✅ Schéma PostgreSQL initialisé avec succès.');
 
     // 2. Transférer les données table par table
     for (const table of TABLES_ORDER) {
@@ -79,7 +104,7 @@ async function migrate() {
           continue;
         }
 
-        console.log(`⏳ Migration de la table ${table} (${rows.length} lignes)...`);
+        console.log(`⏳ Migration de la table ${table} (${rows.length} enregistrements)...`);
 
         for (const row of rows) {
           const keys = Object.keys(row);
@@ -114,18 +139,25 @@ async function migrate() {
               SELECT setval(pg_get_serial_sequence($1, 'id'), COALESCE(MAX(id), 1)) FROM "${table}"
             `, [table]);
           }
-        } catch (seqErr) {
-          // Si la table n'a pas de colonne ID autoincrément, ignorer
-        }
+        } catch (seqErr) {}
 
         console.log(`✅ Table ${table} migrée avec succès.`);
       } catch (tableErr) {
-        console.warn(`⚠️ Avertissement sur table ${table}:`, tableErr.message);
+        console.warn(`⚠️ Table ${table} :`, tableErr.message);
       }
     }
 
+    // Vérification finale des comptages dans Supabase
+    console.log('\n📊 Résumé des données migrées dans Supabase :');
+    for (const table of ['users', 'chantiers', 'caisses', 'caisse_mouvements', 'depenses', 'ventes', 'employees', 'materiel', 'stocks_articles', 'chantier_planning', 'company_settings']) {
+      try {
+        const res = await client.query(`SELECT COUNT(*) as cnt FROM "${table}"`);
+        console.log(` - ${table} : ${res.rows[0].cnt} enregistrements`);
+      } catch (e) {}
+    }
+
     console.log('\n======================================================');
-    console.log('🎉 MIGRATION VERS POSTGRESQL TERMINÉE AVEC SUCCÈS !');
+    console.log('🎉 MIGRATION VERS SUPABASE TERMINÉE AVEC SUCCÈS !');
     console.log('======================================================\n');
   } catch (err) {
     console.error('❌ Erreur générale lors de la migration :', err);
