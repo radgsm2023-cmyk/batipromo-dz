@@ -134,6 +134,18 @@ export default function App() {
       setCaisses(caissesList);
       setEmployees(empList);
       if (settings) setCompanySettings(settings);
+
+      // Synchroniser automatiquement le profil currentUser avec les données fraîches de la base (Supabase)
+      if (currentUser && uList && uList.length > 0) {
+        const freshUser = uList.find(u => u.id === currentUser.id || u.email === currentUser.email);
+        if (freshUser) {
+          const merged = { ...currentUser, ...freshUser };
+          setCurrentUser(merged);
+          try {
+            localStorage.setItem('batipromo_user', JSON.stringify(merged));
+          } catch (e) {}
+        }
+      }
     } catch (e) {
       console.error('Erreur chargement données initiales:', e);
     }
