@@ -20,6 +20,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=5000
+ENV DATABASE_URL="postgresql://postgres.bbldpilwekgdbbnjwslb:Radino%402019%40@aws-0-eu-west-1.pooler.supabase.com:5432/postgres"
 
 # Installation des dépendances serveur de production
 COPY package*.json ./
@@ -28,7 +29,6 @@ RUN npm ci --omit=dev
 # Copie du code backend et du frontend compilé
 COPY server/ ./server/
 COPY --from=client-builder /app/client/dist ./client/dist
-COPY batipromo.db* ./
 
 # Répertoire pour les uploads de documents
 RUN mkdir -p /app/server/uploads

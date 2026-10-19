@@ -4,12 +4,14 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { createPgDatabase } = require('./pg_adapter');
 
-let db;
-const isPostgres = !!process.env.DATABASE_URL;
+const SUPABASE_DEFAULT_URL = 'postgresql://postgres.bbldpilwekgdbbnjwslb:Radino%402019%40@aws-0-eu-west-1.pooler.supabase.com:5432/postgres';
+const databaseUrl = process.env.DATABASE_URL || SUPABASE_DEFAULT_URL;
+const isPostgres = !process.env.USE_SQLITE && !!databaseUrl;
 
+let db;
 if (isPostgres) {
   console.log('🐘 Connexion active à la base de données PostgreSQL / Supabase.');
-  db = createPgDatabase(process.env.DATABASE_URL);
+  db = createPgDatabase(databaseUrl);
 } else {
   console.log('🗃️ Utilisation de la base de données locale SQLite (batipromo.db).');
   const dbPath = path.resolve(__dirname, '..', 'batipromo.db');
@@ -589,5 +591,6 @@ const ALL_PERMISSIONS = [
 module.exports = {
   db,
   initDatabase,
+  isPostgres,
   ALL_PERMISSIONS
 };

@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('node:path');
 const fs = require('node:fs');
-const { initDatabase } = require('./db');
+const { initDatabase, isPostgres } = require('./db');
 const { seedDatabase } = require('./seed');
 
 const { applySecurityHeaders } = require('./middleware/security');
@@ -51,6 +51,7 @@ app.get('/api/health', (req, res) => {
     status: 'OK',
     application: 'BATIPROMO DZ API',
     currency: 'DZD (DA)',
+    database: isPostgres ? 'PostgreSQL (Supabase)' : 'SQLite (Local)',
     version: '1.0.0',
     timestamp: new Date().toISOString()
   });
