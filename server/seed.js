@@ -6,7 +6,7 @@ function seedDatabase() {
 
   // Check if users already exist
   const existingUsers = db.prepare('SELECT COUNT(*) as count FROM users').get();
-  if (existingUsers && existingUsers.count > 0) {
+  if (existingUsers && Number(existingUsers.count) > 0) {
     console.log('Database already seeded.');
     return;
   }

@@ -1,15 +1,35 @@
+require('dotenv').config();
 const { DatabaseSync } = require('node:sqlite');
 const path = require('node:path');
 const fs = require('node:fs');
+const { createPgDatabase } = require('./pg_adapter');
 
-// Ensure db directory
-const dbPath = path.resolve(__dirname, '..', 'batipromo.db');
-const db = new DatabaseSync(dbPath);
+let db;
+const isPostgres = !!process.env.DATABASE_URL;
 
-// Enable foreign keys and WAL mode if applicable
-db.exec('PRAGMA foreign_keys = ON;');
+if (isPostgres) {
+  console.log('🐘 Connexion active à la base de données PostgreSQL / Supabase.');
+  db = createPgDatabase(process.env.DATABASE_URL);
+} else {
+  console.log('🗃️ Utilisation de la base de données locale SQLite (batipromo.db).');
+  const dbPath = path.resolve(__dirname, '..', 'batipromo.db');
+  db = new DatabaseSync(dbPath);
+  try {
+    db.exec('PRAGMA foreign_keys = ON;');
+  } catch (e) {}
+}
 
 function initDatabase() {
+  if (isPostgres) {
+    try {
+      const schemaSql = fs.readFileSync(path.resolve(__dirname, 'schema_postgres.sql'), 'utf-8');
+      db.exec(schemaSql);
+    } catch (e) {
+      console.warn('Init schema PG:', e.message);
+    }
+    return;
+  }
+
   db.exec(`
     -- 1. Users
     CREATE TABLE IF NOT EXISTS users (
