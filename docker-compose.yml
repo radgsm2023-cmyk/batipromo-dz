@@ -1,6 +1,27 @@
 version: '3.8'
 
 services:
+  # Base de données PostgreSQL Professionnelle
+  db:
+    image: postgres:16-alpine
+    container_name: batipromo-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: batipromo
+      POSTGRES_PASSWORD: batipromo_secure_pass_2026
+      POSTGRES_DB: batipromo_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/schema_postgres.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U batipromo -d batipromo_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Application Web & API BATIPROMO DZ
   batipromo:
     build:
       context: .
@@ -8,16 +29,19 @@ services:
     image: batipromo-dz:latest
     container_name: batipromo-app
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "5000:5000"
     environment:
       - PORT=5000
       - NODE_ENV=production
+      - DATABASE_URL=postgresql://batipromo:batipromo_secure_pass_2026@db:5432/batipromo_db
       - JWT_SECRET=batipromo_algerie_secret_production_2026
     volumes:
       - batipromo_uploads:/app/server/uploads
-      - batipromo_db:/app/data
 
 volumes:
+  postgres_data:
   batipromo_uploads:
-  batipromo_db:
