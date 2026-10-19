@@ -21,7 +21,7 @@ router.get('/', (req, res) => {
     }
 
     if (unread_only === 'true' || unread_only === '1') {
-      query += ` AND n.is_read = 0`;
+      query += ` AND n.is_read = FALSE`;
     }
 
     query += ` ORDER BY n.created_at DESC, n.id DESC LIMIT ?`;
@@ -32,7 +32,7 @@ router.get('/', (req, res) => {
     const unreadCountRow = db.prepare(`
       SELECT COUNT(*) as count 
       FROM notifications 
-      WHERE is_read = 0 ${user_id ? 'AND (user_id = ? OR user_id IS NULL)' : ''}
+      WHERE is_read = FALSE ${user_id ? 'AND (user_id = ? OR user_id IS NULL)' : ''}
     `).get(...(user_id ? [user_id] : []));
 
     res.json({
@@ -49,7 +49,7 @@ router.get('/', (req, res) => {
 router.put('/:id/read', (req, res) => {
   try {
     const { id } = req.params;
-    db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ?').run(id);
+    db.prepare('UPDATE notifications SET is_read = TRUE WHERE id = ?').run(id);
     res.json({ success: true, message: 'Notification marquée comme lue' });
   } catch (error) {
     console.error('Error marking notification as read:', error);
@@ -62,9 +62,9 @@ router.put('/mark-all-read', (req, res) => {
   try {
     const { user_id } = req.body;
     if (user_id) {
-      db.prepare('UPDATE notifications SET is_read = 1 WHERE (user_id = ? OR user_id IS NULL)').run(user_id);
+      db.prepare('UPDATE notifications SET is_read = TRUE WHERE (user_id = ? OR user_id IS NULL)').run(user_id);
     } else {
-      db.prepare('UPDATE notifications SET is_read = 1').run();
+      db.prepare('UPDATE notifications SET is_read = TRUE').run();
     }
     res.json({ success: true, message: 'Toutes les notifications ont été marquées comme lues' });
   } catch (error) {

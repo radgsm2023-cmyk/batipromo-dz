@@ -87,8 +87,8 @@ router.get('/stats', (req, res) => {
         COALESCE(SUM(n.quantite), 0) as quantite_totale
       FROM stocks_articles a
       LEFT JOIN stocks_niveaux n ON a.id = n.article_id
-      GROUP BY a.id
-      HAVING quantite_totale <= a.stock_min_alerte
+      GROUP BY a.id, a.code_article, a.designation, a.unite, a.stock_min_alerte
+      HAVING COALESCE(SUM(n.quantite), 0) <= a.stock_min_alerte
     `).all();
 
     // 8. Chantiers récapitulatif
@@ -133,8 +133,8 @@ router.get('/stats', (req, res) => {
       SELECT strftime('%Y-%m', date) as mois, SUM(montant_total) as montant
       FROM depenses
       WHERE date >= date('now', '-12 months')
-      GROUP BY mois
-      ORDER BY mois ASC
+      GROUP BY 1
+      ORDER BY 1 ASC
     `).all();
 
     // 12. Ventes par statut
@@ -154,8 +154,8 @@ router.get('/stats', (req, res) => {
         SUM(CASE WHEN m.type = 'ENTREE' THEN m.montant ELSE -m.montant END) as solde
       FROM caisse_mouvements m
       WHERE m.date >= date('now', '-6 months')
-      GROUP BY mois
-      ORDER BY mois ASC
+      GROUP BY 1
+      ORDER BY 1 ASC
     `).all();
 
     res.json({
@@ -263,8 +263,8 @@ router.get('/stats/:chantierId', (req, res) => {
       SELECT strftime('%Y-%m', date) as mois, SUM(montant_total) as montant
       FROM depenses
       WHERE chantier_id = ? AND date >= date('now', '-12 months')
-      GROUP BY mois
-      ORDER BY mois ASC
+      GROUP BY 1
+      ORDER BY 1 ASC
     `).all(chantierId);
 
     // --- Ventes ---

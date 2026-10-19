@@ -41,17 +41,32 @@ function createPgDatabase(connectionString) {
     let sql = originalSql.trim();
 
     // 1. Conversion des strftime SQLite vers TO_CHAR PostgreSQL
-    // strftime('%Y-%m', date) -> TO_CHAR(date, 'YYYY-MM')
     sql = sql.replace(/strftime\s*\(\s*'%Y-%m'\s*,\s*([^)]+)\)/gi, "TO_CHAR($1, 'YYYY-MM')");
     sql = sql.replace(/strftime\s*\(\s*'%Y'\s*,\s*([^)]+)\)/gi, "TO_CHAR($1, 'YYYY')");
 
-    // 2. Conversion INSERT OR IGNORE -> INSERT INTO ... ON CONFLICT DO NOTHING
+    // 2. Conversion des fonctions de date SQLite date('now', '-X months') vers PostgreSQL
+    sql = sql.replace(/date\s*\(\s*'now'\s*,\s*'-?([0-9]+)\s*months?'\s*\)/gi, "CURRENT_DATE - INTERVAL '$1 months'");
+    sql = sql.replace(/date\s*\(\s*'now'\s*,\s*'-?([0-9]+)\s*days?'\s*\)/gi, "CURRENT_DATE - INTERVAL '$1 days'");
+    sql = sql.replace(/date\s*\(\s*'now'\s*,\s*'-?([0-9]+)\s*years?'\s*\)/gi, "CURRENT_DATE - INTERVAL '$1 years'");
+    sql = sql.replace(/date\s*\(\s*'now'\s*\)/gi, "CURRENT_DATE");
+
+    // 3. Conversion automatique des HAVING avec alias quantite_totale
+    sql = sql.replace(/HAVING\s+quantite_totale\s*<=\s*([a-zA-Z0-9_.]+)/gi, 'HAVING COALESCE(SUM(n.quantite), 0) <= $1');
+
+    // 4. Conversion automatique des colonnes booléennes (= 0 -> = FALSE, = 1 -> = TRUE)
+    const boolCols = '(is_read|is_sensible|is_system|is_depot_central|exiger_validation_toutes_sorties)';
+    sql = sql.replace(new RegExp(`(\\b(?:[a-zA-Z0-9_]+\\.)?${boolCols})\\s*=\\s*0\\b`, 'gi'), '$1 = FALSE');
+    sql = sql.replace(new RegExp(`(\\b(?:[a-zA-Z0-9_]+\\.)?${boolCols})\\s*=\\s*1\\b`, 'gi'), '$1 = TRUE');
+    sql = sql.replace(new RegExp(`\\bSET\\s+(${boolCols})\\s*=\\s*0\\b`, 'gi'), 'SET $1 = FALSE');
+    sql = sql.replace(new RegExp(`\\bSET\\s+(${boolCols})\\s*=\\s*1\\b`, 'gi'), 'SET $1 = TRUE');
+
+    // 5. Conversion INSERT OR IGNORE -> INSERT INTO ... ON CONFLICT DO NOTHING
     sql = sql.replace(/INSERT\s+OR\s+IGNORE\s+INTO/gi, 'INSERT INTO');
     if (originalSql.match(/INSERT\s+OR\s+IGNORE\s+INTO/i) && !sql.match(/ON\s+CONFLICT/i)) {
       sql += ' ON CONFLICT DO NOTHING';
     }
 
-    // 3. Conversion des placeholders ? en $1, $2, ...
+    // 6. Conversion des placeholders ? en $1, $2, ...
     let paramIndex = 0;
     sql = sql.replace(/\?/g, () => `$${++paramIndex}`);
 
