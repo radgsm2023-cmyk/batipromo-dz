@@ -75,7 +75,7 @@ router.get('/:id', (req, res) => {
         e.*, 
         a.role_sur_chantier, 
         a.date_debut as date_affectation,
-        (SELECT COUNT(*) FROM employee_pointages WHERE employee_id = e.id AND chantier_id = ? AND date >= date('now', '-30 days')) as jours_presence_30j
+        (SELECT COUNT(*) FROM employee_pointages WHERE employee_id = e.id AND chantier_id = ? AND date >= CURRENT_DATE - INTERVAL '30 days') as jours_presence_30j
       FROM employee_affectations a
       JOIN employees e ON a.employee_id = e.id
       WHERE a.chantier_id = ? AND a.statut = 'EN_COURS'

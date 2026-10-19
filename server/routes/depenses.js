@@ -148,7 +148,7 @@ router.put('/:id/reglement', (req, res) => {
           reference, caisse_id, type, montant, date, mode_paiement, 
           motif, categorie, chantier_id, fournisseur_id, status
         )
-        VALUES (?, ?, 'SORTIE', ?, date('now'), ?, ?, ?, ?, ?, 'VALIDE')
+        VALUES (?, ?, 'SORTIE', ?, CURRENT_DATE, ?, ?, ?, ?, ?, 'VALIDE')
       `).run(
         bcRef, caisse_id, montantVerse, mode_reglement || 'ESPECES',
         `Règlement solde dépense ${depense.reference}`, depense.categorie,

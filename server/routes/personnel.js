@@ -12,8 +12,8 @@ router.get('/employees', (req, res) => {
         e.*,
         ch.name as chantier_actuel_name,
         ch.code as chantier_actuel_code,
-        (SELECT COUNT(*) FROM employee_pointages WHERE employee_id = e.id AND date >= date('now', '-30 days') AND statut = 'PRESENT') as jours_travailles_ce_mois,
-        (SELECT COALESCE(SUM(montant), 0) FROM caisse_mouvements WHERE beneficiaire_id = e.id AND categorie = 'AVANCE_SALAIRE' AND date >= date('now', 'start of month')) as total_avances_mois
+        (SELECT COUNT(*) FROM employee_pointages WHERE employee_id = e.id AND date >= CURRENT_DATE - INTERVAL '30 days' AND statut = 'PRESENT') as jours_travailles_ce_mois,
+        (SELECT COALESCE(SUM(montant), 0) FROM caisse_mouvements WHERE beneficiaire_id = e.id AND categorie = 'AVANCE_SALAIRE' AND date >= DATE_TRUNC('month', CURRENT_DATE)) as total_avances_mois
       FROM employees e
       LEFT JOIN chantiers ch ON e.chantier_actuel_id = ch.id
       WHERE 1=1

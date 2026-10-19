@@ -130,9 +130,9 @@ router.get('/stats', (req, res) => {
 
     // 11. Évolution dépenses mensuelles (12 derniers mois)
     const depensesEvolution = db.prepare(`
-      SELECT strftime('%Y-%m', date) as mois, SUM(montant_total) as montant
+      SELECT TO_CHAR(date::date, 'YYYY-MM') as mois, SUM(montant_total) as montant
       FROM depenses
-      WHERE date >= date('now', '-12 months')
+      WHERE date >= CURRENT_DATE - INTERVAL '12 months'
       GROUP BY 1
       ORDER BY 1 ASC
     `).all();
@@ -148,12 +148,12 @@ router.get('/stats', (req, res) => {
     // 13. Évolution trésorerie (6 derniers mois)
     const tresorerieEvolution = db.prepare(`
       SELECT 
-        strftime('%Y-%m', m.date) as mois,
+        TO_CHAR(m.date::date, 'YYYY-MM') as mois,
         SUM(CASE WHEN m.type = 'ENTREE' THEN m.montant ELSE 0 END) as entrees,
         SUM(CASE WHEN m.type = 'SORTIE' THEN m.montant ELSE 0 END) as sorties,
         SUM(CASE WHEN m.type = 'ENTREE' THEN m.montant ELSE -m.montant END) as solde
       FROM caisse_mouvements m
-      WHERE m.date >= date('now', '-6 months')
+      WHERE m.date >= CURRENT_DATE - INTERVAL '6 months'
       GROUP BY 1
       ORDER BY 1 ASC
     `).all();
@@ -260,9 +260,9 @@ router.get('/stats/:chantierId', (req, res) => {
     `).all(chantierId);
 
     const depensesEvolution = db.prepare(`
-      SELECT strftime('%Y-%m', date) as mois, SUM(montant_total) as montant
+      SELECT TO_CHAR(date::date, 'YYYY-MM') as mois, SUM(montant_total) as montant
       FROM depenses
-      WHERE chantier_id = ? AND date >= date('now', '-12 months')
+      WHERE chantier_id = ? AND date >= CURRENT_DATE - INTERVAL '12 months'
       GROUP BY 1
       ORDER BY 1 ASC
     `).all(chantierId);
