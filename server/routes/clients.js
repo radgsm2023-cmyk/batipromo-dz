@@ -44,7 +44,10 @@ router.post('/', (req, res) => {
 // List all sales (lots / appartements)
 router.get('/ventes/list', (req, res) => {
   try {
-    const { chantier_id, client_id, statut } = req.query;
+    const qp = (v) => (v && v !== 'undefined' && v !== 'null') ? v : undefined;
+    const chantier_id = qp(req.query.chantier_id);
+    const client_id = qp(req.query.client_id);
+    const statut = qp(req.query.statut);
 
     let query = `
       SELECT 

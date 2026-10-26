@@ -5,7 +5,12 @@ const { db } = require('../db');
 // List expenses with filters
 router.get('/', (req, res) => {
   try {
-    const { chantier_id, fournisseur_id, categorie, statut_paiement, search } = req.query;
+    const qp = (v) => (v && v !== 'undefined' && v !== 'null') ? v : undefined;
+    const chantier_id = qp(req.query.chantier_id);
+    const fournisseur_id = qp(req.query.fournisseur_id);
+    const categorie = qp(req.query.categorie);
+    const statut_paiement = qp(req.query.statut_paiement);
+    const search = qp(req.query.search);
 
     let query = `
       SELECT 

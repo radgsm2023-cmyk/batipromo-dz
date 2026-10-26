@@ -72,7 +72,15 @@ router.get('/:id', (req, res) => {
 // List all mouvements across all caisses (with query filters)
 router.get('/mouvements/all', (req, res) => {
   try {
-    const { caisse_id, chantier_id, type, status, date_debut, date_fin, search } = req.query;
+    // qp() filters out 'undefined'/'null' strings sent by the frontend when no filter is selected
+    const qp = (v) => (v && v !== 'undefined' && v !== 'null') ? v : undefined;
+    const caisse_id   = qp(req.query.caisse_id);
+    const chantier_id = qp(req.query.chantier_id);
+    const type        = qp(req.query.type);
+    const status      = qp(req.query.status);
+    const date_debut  = qp(req.query.date_debut);
+    const date_fin    = qp(req.query.date_fin);
+    const search      = qp(req.query.search);
 
     let query = `
       SELECT 

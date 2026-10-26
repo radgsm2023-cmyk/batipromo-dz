@@ -5,7 +5,10 @@ const { db } = require('../db');
 // 1. List employees with current chantier and attendance stats
 router.get('/employees', (req, res) => {
   try {
-    const { chantier_id, statut, search } = req.query;
+    const qp = (v) => (v && v !== 'undefined' && v !== 'null') ? v : undefined;
+    const chantier_id = qp(req.query.chantier_id);
+    const statut = qp(req.query.statut);
+    const search = qp(req.query.search);
 
     let query = `
       SELECT 

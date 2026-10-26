@@ -5,7 +5,11 @@ const { db } = require('../db');
 // 1. List all equipment with filter by type (INTERNE / LOCATION), status, or chantier
 router.get('/', (req, res) => {
   try {
-    const { type_propriete, statut, chantier_id, search } = req.query;
+    const qp = (v) => (v && v !== 'undefined' && v !== 'null') ? v : undefined;
+    const type_propriete = qp(req.query.type_propriete);
+    const statut = qp(req.query.statut);
+    const chantier_id = qp(req.query.chantier_id);
+    const search = qp(req.query.search);
 
     let query = `
       SELECT 

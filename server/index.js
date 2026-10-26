@@ -22,14 +22,30 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Global middleware: strip query params that are the string "undefined" or "null"
-// (Frontend sometimes sends ?chantier_id=undefined when the value is not set)
+// In Express 5, req.query is a getter, so delete req.query[k] has no effect.
+// We redefine req.query on the request instance using Object.defineProperty.
 // PostgreSQL is strict and refuses to cast "undefined" to integer — this causes 500 errors.
 app.use((req, _res, next) => {
   if (req.query) {
-    for (const key of Object.keys(req.query)) {
-      const val = req.query[key];
-      if (val === 'undefined' || val === 'null' || val === '') {
-        delete req.query[key];
+    const sanitized = {};
+    for (const [key, val] of Object.entries(req.query)) {
+      if (val !== 'undefined' && val !== 'null' && val !== '') {
+        sanitized[key] = val;
+      }
+    }
+    Object.defineProperty(req, 'query', {
+      value: sanitized,
+      writable: true,
+      enumerable: true,
+      configurable: true
+    });
+  }
+  if (req.body && typeof req.body === 'object') {
+    for (const key of Object.keys(req.body)) {
+      if (req.body[key] === 'undefined') {
+        req.body[key] = undefined;
+      } else if (req.body[key] === 'null') {
+        req.body[key] = null;
       }
     }
   }

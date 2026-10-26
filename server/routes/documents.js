@@ -44,7 +44,14 @@ const upload = multer({
 // List documents with filters
 router.get('/', (req, res) => {
   try {
-    const { chantier_id, fournisseur_id, client_id, employee_id, materiel_id, type_document, search } = req.query;
+    const qp = (v) => (v && v !== 'undefined' && v !== 'null') ? v : undefined;
+    const chantier_id = qp(req.query.chantier_id);
+    const fournisseur_id = qp(req.query.fournisseur_id);
+    const client_id = qp(req.query.client_id);
+    const employee_id = qp(req.query.employee_id);
+    const materiel_id = qp(req.query.materiel_id);
+    const type_document = qp(req.query.type_document);
+    const search = qp(req.query.search);
 
     let query = `
       SELECT 

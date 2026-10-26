@@ -74,10 +74,18 @@ function createPgDatabase(connectionString) {
   }
 
   function formatParams(args) {
+    let params = args;
     if (args.length === 1 && Array.isArray(args[0])) {
-      return args[0];
+      params = args[0];
     }
-    return args;
+    // Assurer que les valeurs undefined ou les chaînes 'undefined'/'null' sont converties en null
+    // pour éviter les erreurs de typage strict PostgreSQL (ex: type integer: "undefined")
+    return params.map(p => {
+      if (p === undefined || p === 'undefined' || p === 'null') {
+        return null;
+      }
+      return p;
+    });
   }
 
   return {

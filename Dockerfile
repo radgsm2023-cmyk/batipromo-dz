@@ -27,6 +27,8 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 # Copie du code backend et du frontend compilé
+# CACHEBUST invalide le cache Docker pour forcer la copie des nouveaux fichiers serveur
+ARG CACHEBUST=3
 COPY server/ ./server/
 COPY --from=client-builder /app/client/dist ./client/dist
 

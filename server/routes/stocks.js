@@ -64,7 +64,9 @@ router.post('/articles', (req, res) => {
 // 2. Stock levels by location (Chantiers & Central Warehouse)
 router.get('/niveaux', (req, res) => {
   try {
-    const { article_id, chantier_id } = req.query;
+    const qp = (v) => (v && v !== 'undefined' && v !== 'null') ? v : undefined;
+    const article_id = qp(req.query.article_id);
+    const chantier_id = qp(req.query.chantier_id);
 
     let query = `
       SELECT 
